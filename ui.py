@@ -5,6 +5,7 @@ import datetime
 import os
 import time
 import platform
+import cv2
 
 class TelloUI(object):
     """
@@ -19,7 +20,7 @@ class TelloUI(object):
         self.tello = tello # videostream device
         self.thread = None # thread of the Tkinter mainloop
         self.stopEvent = None  
-        
+       
         # control variables
         self.distance = 0.1  # default distance for 'move' cmd
         self.degree = 30  # default degree for 'cw' or 'ccw' cmd
@@ -42,6 +43,11 @@ class TelloUI(object):
         # the most recently read frame
         self.stopEvent = threading.Event()
         
+        self.video_container = tki.Label(self.root)
+        self.video_container.pack(side='bottom', fill='both',
+                              expand='yes', padx=10, pady=5)
+
+
         # set a callback to handle when the window is closed
         self.root.wm_title('TELLO Controller')
         self.root.wm_protocol('WM_DELETE_WINDOW', self.on_close)
@@ -252,6 +258,20 @@ class TelloUI(object):
     def on_keypress_right(self, event):
         print(f'right {self.distance} m')
         self.telloMoveRight(self.distance)
+
+    def _videoLoop(self):
+        try:
+            while not self.stopEvent.is_set():
+                # Capture frame from the Tello video stream
+                frame = self.tello.get_frame_read().frame
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                # Update the panel with the new image
+                self.video_container.configure(image=frame)
+                self.video_container.image = frame
+
+        except RuntimeError as e:
+            print("[INFO] caught a RuntimeError")
 
     def on_close(self):
         """
